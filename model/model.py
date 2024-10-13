@@ -8,21 +8,18 @@ from .ComputeFluxes import ComputeFluxes
 
 def model(t,z, climate, daynum):
 
-    gh_state = z[0:11]
-    fm_state = z[11:]
+    gh_state = z[0:10]
+    fm_state = z[10:]
 
     external_radiation, external_climate = ext_clima(t, climate, daynum)
 
-    fluxes = ComputeFluxes(t, gh_state,
-                             fm_state, external_radiation)
-
-    dgreenhouse = greenhouse(t,gh_state,
+    fluxes = ComputeFluxes(t,gh_state,
                              fm_state, 
-                             external_radiation,
-                             external_climate,
-                             fluxes)
+                             external_radiation,external_climate)
 
-    dfarm       = farm(t,fm_state,external_radiation,fluxes)
+    dgreenhouse = greenhouse(t,gh_state,fluxes)
+
+    dfarm       = farm(t,fm_state,fluxes)
 
     
     return np.concatenate((dgreenhouse,dfarm))

@@ -1,22 +1,22 @@
 
 from .parameters import *
 from .tools.functions import day
-def farm(t,fm_state,external_radiation,fluxes):
+def farm(t,fm_state,fluxes):
 
     # Values being calculated
 
 
-
-    T_v     = fm_state[0]
-    T_vmean = fm_state[1]
-    T_vsum  = fm_state[2]
-    C_buf   = fm_state[3]
-    C_fruit = fm_state[4]
-    C_leaf  = fm_state[5]
-    C_stem  = fm_state[6]
-    R_fruit = fm_state[7]
-    R_leaf  = fm_state[8]
-    R_stem  = fm_state[9]
+    T_m     = fm_state[0]
+    T_v     = fm_state[1]
+    T_vmean = fm_state[2]
+    T_vsum  = fm_state[3]
+    C_buf   = fm_state[4]
+    C_fruit = fm_state[5]
+    C_leaf  = fm_state[6]
+    C_stem  = fm_state[7]
+    R_fruit = fm_state[8]
+    R_leaf  = fm_state[9]
+    R_stem  = fm_state[10]
 
             # Fluxes
 
@@ -33,6 +33,24 @@ def farm(t,fm_state,external_radiation,fluxes):
     MC_leaf_i  = fluxes[10]
     MC_stem_i  = fluxes[11]
     MC_i_buf   = fluxes[12]
+    QV_i_m     = fluxes[13]
+    QP_i_m     = fluxes[14]
+    QR_m_c     = fluxes[15]
+    QR_m_p     = fluxes[16]
+    QD_m_p     = fluxes[17]
+    QS_m_NIR   = fluxes[18]
+    QR_c_m     = fluxes[19]
+    QR_p_m     = fluxes[20]
+
+    QS_tot_rNIR = fluxes[21]
+    QS_tot_rVIS = fluxes[22]
+    QS_tot_fNIR = fluxes[23]
+    QS_tot_fVIS = fluxes[24]
+    QS_int_rNIR = fluxes[25]
+    QS_int_rVIS = fluxes[26]
+    QS_int_fNIR = fluxes[27]
+    QS_int_fVIS = fluxes[28]
+
 
     # External weather and dependent internal parameter values
     LAI = SLA*C_leaf # Leaf area index
@@ -60,14 +78,6 @@ def farm(t,fm_state,external_radiation,fluxes):
 
     # Radiation from artifical lighting
     QS_al_NIR = 0. # no artificial lighting
-
-    # Solar radiation incident on the cover
-    QS_tot_rNIR = 0.5*SurfaceArea@external_radiation[0] # Direct 
-    QS_tot_fNIR = 0.5*SurfaceArea@external_radiation[1]  # Diffuse
-
-    # Transmitted solar radiation
-    QS_int_rNIR = tau_c_NIR*QS_tot_rNIR # J/s total inside greenhouse
-    QS_int_fNIR = tau_c_NIR*QS_tot_fNIR
 
 
     # Solar radiation absorbed by the vegetation
@@ -143,7 +153,10 @@ def farm(t,fm_state,external_radiation,fluxes):
     dR_leaf_dt = ((dC_leaf_dt + MC_leaf_prune)/C_leaf - R_leaf)
     dR_stem_dt = (dC_stem_dt/C_stem - R_stem)
     
-    return np.array([dT_v_dt,dT_vmean_dt,dT_vsum_dt,
+    dT_m_dt = (1/(A_m*c_m))*(QV_i_m + QP_i_m - QR_m_v - QR_m_c - QR_m_p - QD_m_p + QS_m_NIR)
+
+    return np.array([dT_m_dt,dT_v_dt,dT_vmean_dt,
+                     dT_vsum_dt,
                      dC_buf_dt,
                      dC_fruit_dt,dC_leaf_dt,dC_stem_dt,
                      dR_fruit_dt,dR_leaf_dt,dR_stem_dt])
