@@ -11,11 +11,11 @@ def model(t,z, climate, daynum):
     gh_state = z[0:10]
     fm_state = z[10:]
 
-    external_radiation, external_climate = ext_clima(t, climate, daynum)
+    ec_state = ext_clima(t, climate, daynum)
 
     fluxes = ComputeFluxes(t,gh_state,
                              fm_state, 
-                             external_radiation,external_climate)
+                             ec_state)
 
     dgreenhouse = greenhouse(t,gh_state,fluxes)
 

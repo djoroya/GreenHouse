@@ -10,8 +10,6 @@ def ext_clima(t, climate, daynum):
     DirectSolarRad  = climate[n, 4:12]
     DiffusSolarRad = climate[n, 12:20]
 
-    external_radiation = np.array([DirectSolarRad, 
-                                   DiffusSolarRad])
 
     T_ext = climate[n, 0] + T_k # External air temperature (K)
     T_sk  = climate[n, 1] + T_k # External sky temperature (K)
@@ -19,7 +17,8 @@ def ext_clima(t, climate, daynum):
     wind_speed = climate[n, 2] # External wind speed (m/s)
 
     external_climate = np.array([T_ext, T_sk, 
-                                 wind_speed, RH_e
-                                 ])
+                                 wind_speed, RH_e,
+                                 *DirectSolarRad,
+                                    *DiffusSolarRad])
     
-    return external_radiation, external_climate
+    return external_climate

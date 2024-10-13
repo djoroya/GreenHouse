@@ -4,7 +4,7 @@ from .tools.sat_conc import sat_conc
 from .tools.functions import day
 from .Growth import Growth
 
-def ComputeFluxes(t,gh_state,fm_state,ec_state):
+def ComputeFluxes(t,gh_state,fm_state):
 
     # Values being calculated
     T_c =  gh_state[0]
@@ -32,45 +32,23 @@ def ComputeFluxes(t,gh_state,fm_state,ec_state):
     R_stem  = fm_state[10]
 
 
-    T_ext   = ec_state[0]# External air temperature (K)
-    T_sk    = ec_state[1]# External sky temperature (K)
-    wind_sp = ec_state[2]# External wind speed (m/s)
-    RH_e    = ec_state[3]# External relative humidity
 
 
     # External weather and dependent internal parameter values
     p_w = C_w*R*T_i/M_w # Partial pressure of water [Pa]
     rho_i = ((atm - p_w)*M_a + p_w*M_w)/(R*T_i) # Internal density of air [kg/m^3]   
     LAI = SLA*C_leaf # Leaf area index
-    C_c_ppm = C_c*R*T_i/(M_c*atm)*1.e6 # External carbon dioxide concentration [ppm]
 
 
     # Option for printing progress in hours - uncomment if needed
     #print('Hour', hour)
 
-    Cw_ext = RH_e * sat_conc(T_ext) # External air moisture content
 
-    wind_sp_H = wind_sp*c*H**a # Wind speed at height H
-    wind_pressure = Cp*0.5*rho_i*wind_sp_H**2 # Equals DeltaP for wind pressure
-    stack_pressure_diff = rho_i*g*H*(T_i - T_ext)/T_i # DeltaP for stack pressure
-    Qw = Cd*crack_area*(2*wind_pressure/rho_i)**0.5 # Flow rate due to wind pressure
-    Qs = Cd*crack_area*(2*abs(stack_pressure_diff)/rho_i)**0.5 # Flow rate due to stack pressure
-    Qt = (Qw**2 + Qs**2)**0.5 # Total flow rate
-    total_air_flow = Qt*crack_length_total/crack_length 
-    R_a_min = total_air_flow/V 
 
     # Ventilation
-    DeltaT_vent = T_i - T_sp_vent
-    comp_dtv_low = DeltaT_vent > 0 and DeltaT_vent < 4
-    comp_dtv_high = DeltaT_vent >= 4
 
-    R_a = R_a_min + comp_dtv_low*(R_a_max - R_a_min)/4*DeltaT_vent + comp_dtv_high*(R_a_max-R_a_min)
 
-    QV_i_e = R_a*V*rho_i*c_i*(T_i - T_ext) # Internal air to outside air [J/s]
  
-    MW_i_e = R_a*(C_w - Cw_ext)
-
-
 
     ## Lights
     A_m_wool = 0.75*A_m # Area of mat exposed
@@ -87,7 +65,6 @@ def ComputeFluxes(t,gh_state,fm_state,ec_state):
     
     # Convection external air -> cover
 
-    (QV_e_c, QP_e_c, Nu_e_c ) = convection(d_c, A_c, T_ext, T_c, wind_sp, rho_i, c_i, C_w)
     
     # Convection internal air -> tray
 
@@ -135,7 +112,6 @@ def ComputeFluxes(t,gh_state,fm_state,ec_state):
     QR_m_p = radiation(eps_m, eps_p, rho_m, rho_p, F_m_p, F_p_m, A_m, T_m, T_p)
         
     # Cover to sky
-    QR_c_sk = radiation(eps_ce, 1, 0, 0, 1, 0, A_c, T_c, T_sk)
 
 
     QD_m_p = (A_m*lam_p/l_m)*(T_m-T_p)
@@ -143,73 +119,23 @@ def ComputeFluxes(t,gh_state,fm_state,ec_state):
     ##      Solar radiation
     # We first define the solar elevation angle that determines that absorption of solar radiation. Notation: r is direct radiation, f is diffuse radiation, whilst VIS and NIR stand for visible and near infra-red respectively.
 
-    gamma = np.deg2rad(360.*(day(t) -  80.)/365.) # Year angle [rad] --- day counts from January 1st
-    eqn_time = -7.13*np.cos(gamma) - 1.84*np.sin(gamma) - 0.69*np.cos(2.* gamma) + 9.92*np.sin(2.*gamma) # Equation of time [min]
-    az = np.deg2rad(360.*((t/(3600.)%24.) + eqn_time/60. - 12.)/24.) # Azimuth [rad]
-    delta = np.deg2rad(0.38 - 0.77*np.cos(gamma) + 23.27*np.cos(gamma)) # Declination angle [rad]
-    lat = np.deg2rad(latitude)
-    angler = np.arcsin(np.sin(lat)*np.sin(delta) + np.cos(lat)*np.cos(delta)*np.cos(az)) # Angle of elevation [rad]
-    angle = np.rad2deg(angler)
 
     # Radiation from artifical lighting
     # Solar radiation incident on the cover
-    QS_tot_rNIR = 0.5*SurfaceArea@ec_state[4:12] # Direct 
-    QS_tot_rVIS = 0.5*SurfaceArea@ec_state[4:12]
-    QS_tot_fNIR = 0.5*SurfaceArea@ec_state[12:20] # Diffuse
-    QS_tot_fVIS = 0.5*SurfaceArea@ec_state[12:20]
+
 
     # Transmitted solar radiation
-    QS_int_rNIR = tau_c_NIR*QS_tot_rNIR # J/s total inside greenhouse
-    QS_int_rVIS = tau_c_VIS*QS_tot_rVIS
-    QS_int_fNIR = tau_c_NIR*QS_tot_fNIR
-    QS_int_fVIS = tau_c_VIS*QS_tot_fVIS 
+
 
 
     # Solar radiation absorbed by the vegetation
     # Area = A_v i.e. planted area
     # factor QS by A_v/A_f
 
-    QS_al_NIR = 0. # no artificial lighting
 
-    # Solar radiation absorbed by the mat
-    a_m_fNIR = 0.05 + 0.91*np.exp(-0.5*LAI) # Near-IR diffuse absorption coefficient [-]
-    a_m_rNIR = 0.05 + 0.06*np.exp(-0.08*angle) + (0.92 - 0.53*np.exp(-0.18*angle))*np.exp(-(0.48 + 0.54*np.exp(-0.13*angle))*LAI) # Near-IR direct absorption coefficient [-]
-    QS_m_rNIR = (QS_int_rNIR*(1 - a_obs) + QS_al_NIR)*a_m_rNIR*A_v/A_f
-    QS_m_fNIR = QS_int_fNIR*(1 - a_obs)*a_m_fNIR*A_v/A_f # W
-
-    QS_m_NIR = (QS_m_rNIR + QS_m_fNIR)
-    ## Transpiration
-    QS_int = (QS_int_rNIR + QS_int_rVIS + QS_int_fNIR + QS_int_fVIS)*(1-a_obs)*A_v/A_f # J/s
-
-    #  Vapour pressure deficit at leaf surface
-    xa = C_w/rho_i #[-]
-    xv = sat_conc(T_v)/rho_i #[-]
-    vpd = atm*(xv/(xv + 0.622) - xa/(xa + 0.622)) # [Pa]
-
-    # Stomatal resistance according to Stanghellini
-    x = np.exp(-0.24*LAI) # [-]
-    a_v_short = 0.83*(1 - 0.70*x)*(1 + 0.58*x**2)*(0.88 - x**2 + 0.12*x**(8/3)) # [-]Absorption for shortwave radiation
-    I_s_bar = QS_int*a_v_short/(2*LAI) # [J/s] Mean radiation interacting with leaf surface
-
-    Heavy_CO2 = I_s_bar > 0.
-    r_i_CO2 = 1 + Heavy_CO2*6.1e-7*(C_c_ppm - 200)**2
-    Heavy_vpd = vpd/1000 < 0.8
-    r_i_vpd = Heavy_vpd*(1 + 4.3*(vpd/1000)**2) + (1 - Heavy_vpd)*3.8
-    r_st = 82*((QS_int + 4.3)/(QS_int + 0.54))*(1 + 0.023*(T_v - T_k - 24.5)**2)*r_i_CO2*r_i_vpd #[s/m]
-
-    hL_v_i = 2*LAI*H_fg/(rho_i*c_i)*(Le**(2/3)/HV + r_st/(rho_i*c_i))**(-1)
-
-    QT_St = A_v*hL_v_i*(sat_conc(T_v) - C_w) # J/s
-
-    QT_v_i = max(QT_St,0)
-    
 
     ## Photosynthesis model - Vanthoor
 
- 
-    C_ce = 4.0e-4*M_c*atm/(R*T_ext) # External carbon dioxide concentration [kg/m^3]
-
-    MC_i_e = (R_a*(C_c - C_ce)) # [kg/m^3/s]
 
     
     MC_buf_i, MC_fruit_i, MC_leaf_i, MC_stem_i, MC_i_buf = Growth(t,gh_state,fm_state,ec_state)
