@@ -1,7 +1,7 @@
 import numpy as np
 from .parameters import *
 from .tools.functions import day
-def ext_clima(t,z, climate, daynum):
+def ext_clima(t, climate, daynum):
     
 
     n = int(np.ceil(t/deltaT)) # count
