@@ -2,7 +2,7 @@
 from .parameters import *
 from .tools.HeatExchange import convection, radiation, conduction
 
-def greenhouse(t,gh_state,fluxes):
+def greenhouse(t,gh_state,EC_IC_fluxes, CROP_IC_fluxes):
 
     # Values being calculated
 
@@ -17,44 +17,50 @@ def greenhouse(t,gh_state,fluxes):
     C_w =  gh_state[8]
     C_c =  gh_state[9]
 
+    QS_tot_rNIR = gh_state[10]
+    QS_tot_rVIS = gh_state[11]
+    QS_tot_fNIR = gh_state[12]
+    QS_tot_fVIS = gh_state[13]
+    QS_int_rNIR = gh_state[14]
+    QS_int_rVIS = gh_state[15]
+    QS_int_fNIR = gh_state[16]
+    QS_int_fVIS = gh_state[17]
+
     #
         # Fluxes
 
-    QT_v_i     = fluxes[0]
-    QR_c_v     = fluxes[1]
-    QV_i_v     = fluxes[2]
-    QR_m_v     = fluxes[3]
-    QR_p_v     = fluxes[4]
-    QR_v_c     = fluxes[5]
-    QR_v_m     = fluxes[6]
-    QR_v_p     = fluxes[7]
-    MC_buf_i   = fluxes[8]
-    MC_fruit_i = fluxes[9]
-    MC_leaf_i  = fluxes[10]
-    MC_stem_i  = fluxes[11]
-    MC_i_buf   = fluxes[12]
-    QV_i_m     = fluxes[13]
-    QP_i_m     = fluxes[14]
-    QR_m_c     = fluxes[15]
-    QR_m_p     = fluxes[16]
-    QD_m_p     = fluxes[17]
-    QS_m_NIR   = fluxes[18]
-    QR_c_m     = fluxes[19]
-    QR_p_m     = fluxes[20]
+    QT_v_i     = CROP_IC_fluxes[0]
+    QV_i_v     = CROP_IC_fluxes[2]
+    MC_buf_i   = CROP_IC_fluxes[8]
+    MC_fruit_i = CROP_IC_fluxes[9]
+    MC_leaf_i  = CROP_IC_fluxes[10]
+    MC_stem_i  = CROP_IC_fluxes[11]
+    MC_i_buf   = CROP_IC_fluxes[12]
+    QV_i_m     = CROP_IC_fluxes[13]
+    QP_i_m     = CROP_IC_fluxes[14]
+    QD_m_p     = CROP_IC_fluxes[17]
 
-    QS_tot_rNIR = fluxes[21]
-    QS_tot_rVIS = fluxes[22]
-    QS_tot_fNIR = fluxes[23]
-    QS_tot_fVIS = fluxes[24]
-    QS_int_rNIR = fluxes[25]
-    QS_int_rVIS = fluxes[26]
-    QS_int_fNIR = fluxes[27]
-    QS_int_fVIS = fluxes[28]
-    QV_e_c = fluxes[29]
-    QR_c_sk = fluxes[30]
-    QV_i_e = fluxes[31]
-    MW_i_e = fluxes[32]
-    MC_i_e = fluxes[33]
+    QR_c_v     = CROP_IC_fluxes[1]
+    QR_p_v     = CROP_IC_fluxes[4]
+    QR_c_m     = CROP_IC_fluxes[19]
+    QR_p_m     = CROP_IC_fluxes[20]
+
+
+    QV_e_c     = EC_IC_fluxes[0]
+    QR_c_sk    = EC_IC_fluxes[1]
+    QV_i_e     = EC_IC_fluxes[2]
+    MW_i_e     = EC_IC_fluxes[3]
+    MC_i_e     = EC_IC_fluxes[4]
+    
+    QR_m_v     = CROP_IC_fluxes[3]
+    QR_v_c     = CROP_IC_fluxes[5]
+    QR_v_m     = CROP_IC_fluxes[6]
+    QR_v_p     = CROP_IC_fluxes[7]
+    QR_m_c     = CROP_IC_fluxes[15]
+    QR_m_p     = CROP_IC_fluxes[16]
+    QS_m_NIR   = CROP_IC_fluxes[18]
+
+
 
     # External weather and dependent internal parameter values
 

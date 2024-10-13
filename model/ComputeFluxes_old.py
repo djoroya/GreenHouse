@@ -4,7 +4,7 @@ from .tools.sat_conc import sat_conc
 from .tools.functions import day
 from .Growth import Growth
 
-def ComputeFluxIC_CROP(t,gh_state,fm_state):
+def ComputeFluxes(t,gh_state,fm_state,ec_state):
 
     # Values being calculated
     T_c =  gh_state[0]
@@ -18,14 +18,6 @@ def ComputeFluxIC_CROP(t,gh_state,fm_state):
     C_w =  gh_state[8]
     C_c =  gh_state[9]
 
-    QS_tot_rNIR = gh_state[10]
-    QS_tot_rVIS = gh_state[11]
-    QS_tot_fNIR = gh_state[12]
-    QS_tot_fVIS = gh_state[13]
-    QS_int_rNIR = gh_state[14]
-    QS_int_rVIS = gh_state[15]
-    QS_int_fNIR = gh_state[16]
-    QS_int_fVIS = gh_state[17]
 
     T_m     = fm_state[0]
     T_v     = fm_state[1]
@@ -40,12 +32,44 @@ def ComputeFluxIC_CROP(t,gh_state,fm_state):
     R_stem  = fm_state[10]
 
 
+    T_ext   = ec_state[0]# External air temperature (K)
+    T_sk    = ec_state[1]# External sky temperature (K)
+    wind_sp = ec_state[2]# External wind speed (m/s)
+    RH_e    = ec_state[3]# External relative humidity
+
 
     # External weather and dependent internal parameter values
     p_w = C_w*R*T_i/M_w # Partial pressure of water [Pa]
     rho_i = ((atm - p_w)*M_a + p_w*M_w)/(R*T_i) # Internal density of air [kg/m^3]   
     LAI = SLA*C_leaf # Leaf area index
     C_c_ppm = C_c*R*T_i/(M_c*atm)*1.e6 # External carbon dioxide concentration [ppm]
+
+
+    # Option for printing progress in hours - uncomment if needed
+    #print('Hour', hour)
+
+    Cw_ext = RH_e * sat_conc(T_ext) # External air moisture content
+
+    wind_sp_H = wind_sp*c*H**a # Wind speed at height H
+    wind_pressure = Cp*0.5*rho_i*wind_sp_H**2 # Equals DeltaP for wind pressure
+    stack_pressure_diff = rho_i*g*H*(T_i - T_ext)/T_i # DeltaP for stack pressure
+    Qw = Cd*crack_area*(2*wind_pressure/rho_i)**0.5 # Flow rate due to wind pressure
+    Qs = Cd*crack_area*(2*abs(stack_pressure_diff)/rho_i)**0.5 # Flow rate due to stack pressure
+    Qt = (Qw**2 + Qs**2)**0.5 # Total flow rate
+    total_air_flow = Qt*crack_length_total/crack_length 
+    R_a_min = total_air_flow/V 
+
+    # Ventilation
+    DeltaT_vent = T_i - T_sp_vent
+    comp_dtv_low = DeltaT_vent > 0 and DeltaT_vent < 4
+    comp_dtv_high = DeltaT_vent >= 4
+
+    R_a = R_a_min + comp_dtv_low*(R_a_max - R_a_min)/4*DeltaT_vent + comp_dtv_high*(R_a_max-R_a_min)
+
+    QV_i_e = R_a*V*rho_i*c_i*(T_i - T_ext) # Internal air to outside air [J/s]
+ 
+    MW_i_e = R_a*(C_w - Cw_ext)
+
 
 
     ## Lights
@@ -63,6 +87,7 @@ def ComputeFluxIC_CROP(t,gh_state,fm_state):
     
     # Convection external air -> cover
 
+    (QV_e_c, QP_e_c, Nu_e_c ) = convection(d_c, A_c, T_ext, T_c, wind_sp, rho_i, c_i, C_w)
     
     # Convection internal air -> tray
 
@@ -110,6 +135,7 @@ def ComputeFluxIC_CROP(t,gh_state,fm_state):
     QR_m_p = radiation(eps_m, eps_p, rho_m, rho_p, F_m_p, F_p_m, A_m, T_m, T_p)
         
     # Cover to sky
+    QR_c_sk = radiation(eps_ce, 1, 0, 0, 1, 0, A_c, T_c, T_sk)
 
 
     QD_m_p = (A_m*lam_p/l_m)*(T_m-T_p)
@@ -125,7 +151,18 @@ def ComputeFluxIC_CROP(t,gh_state,fm_state):
     angler = np.arcsin(np.sin(lat)*np.sin(delta) + np.cos(lat)*np.cos(delta)*np.cos(az)) # Angle of elevation [rad]
     angle = np.rad2deg(angler)
 
+    # Radiation from artifical lighting
+    # Solar radiation incident on the cover
+    QS_tot_rNIR = 0.5*SurfaceArea@ec_state[4:12] # Direct 
+    QS_tot_rVIS = 0.5*SurfaceArea@ec_state[4:12]
+    QS_tot_fNIR = 0.5*SurfaceArea@ec_state[12:20] # Diffuse
+    QS_tot_fVIS = 0.5*SurfaceArea@ec_state[12:20]
 
+    # Transmitted solar radiation
+    QS_int_rNIR = tau_c_NIR*QS_tot_rNIR # J/s total inside greenhouse
+    QS_int_rVIS = tau_c_VIS*QS_tot_rVIS
+    QS_int_fNIR = tau_c_NIR*QS_tot_fNIR
+    QS_int_fVIS = tau_c_VIS*QS_tot_fVIS 
 
 
     # Solar radiation absorbed by the vegetation
@@ -170,14 +207,12 @@ def ComputeFluxIC_CROP(t,gh_state,fm_state):
     ## Photosynthesis model - Vanthoor
 
  
+    C_ce = 4.0e-4*M_c*atm/(R*T_ext) # External carbon dioxide concentration [kg/m^3]
 
+    MC_i_e = (R_a*(C_c - C_ce)) # [kg/m^3/s]
 
     
-    MC_buf_i, MC_fruit_i, MC_leaf_i, MC_stem_i, MC_i_buf = Growth(t,
-                                                                  gh_state,
-                                                                  fm_state,
-                                                                  QS_int_rVIS,
-                                                                  QS_int_fVIS)
+    MC_buf_i, MC_fruit_i, MC_leaf_i, MC_stem_i, MC_i_buf = Growth(t,gh_state,fm_state,ec_state)
     
     # QT_v_i     = fluxes[0]
     # QR_c_v     = fluxes[1]
@@ -213,5 +248,10 @@ def ComputeFluxIC_CROP(t,gh_state,fm_state):
     # QR_c_sk     = fluxes[30]
     # MC_i_e      = fluxes[31]
 
-    # QV_e_c,QR_c_sk,QV_i_e,MW_i_e,MC_i_e
-    return  QT_v_i, QR_c_v, QV_i_v, QR_m_v, QR_p_v, QR_v_c, QR_v_m,QR_v_p,MC_buf_i, MC_fruit_i, MC_leaf_i, MC_stem_i, MC_i_buf,QV_i_m, QP_i_m, QR_m_c, QR_m_p,QD_m_p,QS_m_NIR,QR_c_m,QR_p_m
+
+    return np.array([ QT_v_i, QR_c_v, QV_i_v, QR_m_v, QR_p_v, QR_v_c, QR_v_m,QR_v_p,
+                     MC_buf_i, MC_fruit_i, MC_leaf_i, MC_stem_i, MC_i_buf,
+                        QV_i_m, QP_i_m, QR_m_c, QR_m_p,QD_m_p,QS_m_NIR,QR_c_m,QR_p_m,
+                        QS_tot_rNIR,QS_tot_rVIS,QS_tot_fNIR,QS_tot_fVIS,
+                        QS_int_rNIR,QS_int_rVIS,QS_int_fNIR,QS_int_fVIS,
+                        QV_e_c,QR_c_sk,QV_i_e,MW_i_e,MC_i_e])

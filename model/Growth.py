@@ -1,7 +1,7 @@
 from .parameters import *
 from .tools.functions import day
 
-def Growth(t,gh_state,fm_state,ec_state):
+def Growth(t,gh_state,fm_state,QS_int_rVIS,QS_int_fVIS):
 
     # Values being calculated
     T_c =  gh_state[0]
@@ -49,12 +49,7 @@ def Growth(t,gh_state,fm_state,ec_state):
     QS_al_VIS = 0. 
 
     # Solar radiation incident on the cover
-    QS_tot_rVIS = 0.5*SurfaceArea@ec_state[4:12]
-    QS_tot_fVIS = 0.5*SurfaceArea@ec_state[12:20]
 
-    # Transmitted solar radiation
-    QS_int_rVIS = tau_c_VIS*QS_tot_rVIS
-    QS_int_fVIS = tau_c_VIS*QS_tot_fVIS 
 
 
     # Solar radiation absorbed by the vegetation

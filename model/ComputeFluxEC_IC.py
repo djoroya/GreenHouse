@@ -3,7 +3,7 @@ from .parameters import *
 from .tools.sat_conc import sat_conc
 
 
-def ComputeFluxes(t,gh_state,ec_state):
+def ComputeFluxEC_IC(t,gh_state,ec_state):
 
     # Values being calculated
     T_c =  gh_state[0]
@@ -16,6 +16,15 @@ def ComputeFluxes(t,gh_state,ec_state):
     T_s4 = gh_state[7]
     C_w =  gh_state[8]
     C_c =  gh_state[9]
+    #
+    QS_tot_rNIR = gh_state[10]
+    QS_tot_rVIS = gh_state[11]
+    QS_tot_fNIR = gh_state[12]
+    QS_tot_fVIS = gh_state[13]
+    QS_int_rNIR = gh_state[14]
+    QS_int_rVIS = gh_state[15]
+    QS_int_fNIR = gh_state[16]
+    QS_int_fVIS = gh_state[17]
 
 
 
@@ -28,7 +37,6 @@ def ComputeFluxes(t,gh_state,ec_state):
     # External weather and dependent internal parameter values
     p_w = C_w*R*T_i/M_w # Partial pressure of water [Pa]
     rho_i = ((atm - p_w)*M_a + p_w*M_w)/(R*T_i) # Internal density of air [kg/m^3]   
-
 
     # Option for printing progress in hours - uncomment if needed
     #print('Hour', hour)
@@ -56,19 +64,13 @@ def ComputeFluxes(t,gh_state,ec_state):
     MW_i_e = R_a*(C_w - Cw_ext)
 
 
-
-    ## Lights
+    # Convection internal air -> vegetation
 
     # Convection external air -> cover
 
     (QV_e_c, QP_e_c, Nu_e_c ) = convection(d_c, A_c, T_ext, T_c, wind_sp, rho_i, c_i, C_w)
     
-    # Convection internal air -> tray
 
-
-        
-    # Radiation mat to tray
-        
     # Cover to sky
     QR_c_sk = radiation(eps_ce, 1, 0, 0, 1, 0, A_c, T_c, T_sk)
 
@@ -80,41 +82,64 @@ def ComputeFluxes(t,gh_state,ec_state):
 
     # Radiation from artifical lighting
     # Solar radiation incident on the cover
-    QS_tot_rNIR = 0.5*SurfaceArea@ec_state[4:12] # Direct 
-    QS_tot_rVIS = 0.5*SurfaceArea@ec_state[4:12]
-    QS_tot_fNIR = 0.5*SurfaceArea@ec_state[12:20] # Diffuse
-    QS_tot_fVIS = 0.5*SurfaceArea@ec_state[12:20]
+
 
     # Transmitted solar radiation
-    QS_int_rNIR = tau_c_NIR*QS_tot_rNIR # J/s total inside greenhouse
-    QS_int_rVIS = tau_c_VIS*QS_tot_rVIS
-    QS_int_fNIR = tau_c_NIR*QS_tot_fNIR
-    QS_int_fVIS = tau_c_VIS*QS_tot_fVIS 
+
 
 
     # Solar radiation absorbed by the vegetation
     # Area = A_v i.e. planted area
     # factor QS by A_v/A_f
 
+    ## Transpiration
+
+    #  Vapour pressure deficit at leaf surface
+
+    # Stomatal resistance according to Stanghellini
+
+
+
+
+    
+
+    ## Photosynthesis model - Vanthoor
+
+ 
     C_ce = 4.0e-4*M_c*atm/(R*T_ext) # External carbon dioxide concentration [kg/m^3]
 
     MC_i_e = (R_a*(C_c - C_ce)) # [kg/m^3/s]
 
     
-
-    # QS_tot_rNIR = fluxes[21]
-    # QS_tot_rVIS = fluxes[22]
-    # QS_tot_fNIR = fluxes[23]
-    # QS_tot_fVIS = fluxes[24]
-    # QS_int_rNIR = fluxes[25]
-    # QS_int_rVIS = fluxes[26]
+    
+    # QT_v_i     = fluxes[0]
+    # QR_c_v     = fluxes[1]
+    # QV_i_v     = fluxes[2]
+    # QR_m_v     = fluxes[3]
+    # QR_p_v     = fluxes[4]
+    # QR_v_c     = fluxes[5]
+    # QR_v_m     = fluxes[6]
+    # QR_v_p     = fluxes[7]
+    # MC_buf_i   = fluxes[8]
+    # MC_fruit_i = fluxes[9]
+    # MC_leaf_i  = fluxes[10]
+    # MC_stem_i  = fluxes[11]
+    # MC_i_buf   = fluxes[12]
+    # QV_i_m     = fluxes[13]
+    # QP_i_m     = fluxes[14]
+    # QR_m_c     = fluxes[15]
+    # QR_m_p     = fluxes[16]
+    # QD_m_p     = fluxes[17]
+    # QS_m_NIR   = fluxes[18]
+    # QR_c_m     = fluxes[19]
+    # QR_p_m     = fluxes[20]
+    # QV_e_c      = fluxes[21]
+    # QR_c_sk     = fluxes[22]
+    # QV_i_e     = fluxes[23]
+    # MW_i_e     = fluxes[24]
+    # MC_i_e      = fluxes[25]
+    # QS_int_rNIR = fluxes[26]
     # QS_int_fNIR = fluxes[27]
-    # QS_int_fVIS = fluxes[28]
-    # QV_e_c      = fluxes[29]
-    # QR_c_sk     = fluxes[30]
-    # MC_i_e      = fluxes[31]
 
 
-    return np.array([QS_tot_rNIR,QS_tot_rVIS,QS_tot_fNIR,QS_tot_fVIS,
-                        QS_int_rNIR,QS_int_rVIS,QS_int_fNIR,QS_int_fVIS,
-                        QV_e_c,QR_c_sk,QV_i_e,MW_i_e,MC_i_e])
+    return QV_e_c,QR_c_sk,QV_i_e,MW_i_e,MC_i_e
